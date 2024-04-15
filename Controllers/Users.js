@@ -1,4 +1,5 @@
 const User = require('../Models/User');
+const jwt = require('jsonwebtoken');
 
 
 exports.signup = async(req, res) => {
@@ -17,16 +18,28 @@ exports.signup = async(req, res) => {
 
 
 exports.login = async (req, res) => {
-    try{
-        const {email, password} = req.body;
-        const user = await User.findOne({email})
-        if(!user){
-            return res.status(404).send('Invalid password')
-        }
-        res.status(200).send('Login successful');
-    }catch(error){
-        console.log(error);
-        res.status(500).send('Error logging in')
-    }
-}
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
 
+        if (!user) {
+            return res.status(404).send('Invalid email or password');
+        }
+
+        const isValidPassword = await bcrypt.compare(password, user.password);
+
+        if (!isValidPassword) {
+            return res.status(401).send('Invalid email or password');
+        }
+
+        // Generate JWT token
+        const token = jwt.sign({ userId: user._id }, process.env.JWT, { expiresIn: '15m' });
+
+        // Send token in response
+        res.status(200).json({ token });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error logging in');
+    }
+};
